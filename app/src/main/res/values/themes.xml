@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vox_black">#FF08090D</color>
+    <color name="vox_turquoise">#FF00F5D4</color>
+
+    <style name="Theme.VoxAlarm" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/vox_black</item>
+        <item name="android:colorBackground">@color/vox_black</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:colorAccent">@color/vox_turquoise</item>
+    </style>
+</resources>

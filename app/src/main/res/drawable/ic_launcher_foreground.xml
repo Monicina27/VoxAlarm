@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Neon ring with a sound-wave inside -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M54,30a24,24 0,1 1,0 48a24,24 0,1 1,0 -48"
+        android:strokeWidth="4"
+        android:strokeColor="#00F5D4"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M42,50 L42,58 M48,44 L48,64 M54,40 L54,68 M60,46 L60,62 M66,51 L66,57"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeColor="#FF2E97" />
+</vector>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VoxAlarm</string>
+    <string name="channel_ringing">Ringing alarms</string>
+    <string name="channel_ringing_desc">Full-screen alarm while an alarm is going off</string>
+    <string name="channel_upcoming">Upcoming alarms</string>
+    <string name="channel_upcoming_desc">Reminder shortly before an alarm rings</string>
+    <string name="channel_missed">Missed alarms</string>
+    <string name="channel_missed_desc">Alarms that could not ring (for example, the phone was off)</string>
+</resources>
