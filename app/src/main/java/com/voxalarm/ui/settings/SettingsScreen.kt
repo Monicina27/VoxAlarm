@@ -114,6 +114,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun stopVoice() = tts.stop()
 
+    fun refreshTts() = tts.refresh()
+
     /** Creates a real, temporary alarm that rings in [seconds] using the default settings. */
     fun scheduleTestAlarm(seconds: Int) {
         val s = settings.value
@@ -169,6 +171,7 @@ fun SettingsScreen(vm: SettingsViewModel = viewModel()) {
                 onLanguageChange = { t -> vm.update { it.copy(languageTag = t) } },
                 onVoiceChange = { n -> vm.update { it.copy(voiceName = n) } },
                 color = color,
+                onRefresh = vm::refreshTts,
             )
             Spacer(Modifier.height(10.dp))
             LabeledSlider("Speech speed", s.speechRate, { v -> vm.update { it.copy(speechRate = v) } },

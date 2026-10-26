@@ -27,6 +27,7 @@
 
     <!-- Needed on Android 11+ to bind to the installed Text-to-Speech engine -->
     <queries>
+        <package android:name="com.google.android.tts" />
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>

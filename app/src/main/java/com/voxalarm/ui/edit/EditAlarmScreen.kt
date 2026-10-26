@@ -314,6 +314,7 @@ private fun EditAlarmContent(alarm: Alarm, vm: EditAlarmViewModel, onDone: () ->
                     onLanguageChange = { t -> vm.update { it.copy(languageTag = t) } },
                     onVoiceChange = { n -> vm.update { it.copy(voiceName = n) } },
                     color = color,
+                    onRefresh = vm::refreshTts,
                 )
                 Spacer(Modifier.height(10.dp))
                 LabeledSlider(

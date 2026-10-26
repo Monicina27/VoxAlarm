@@ -2,6 +2,7 @@ package com.voxalarm.ui.components
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -30,6 +31,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.graphics.Brush
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +48,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.voxalarm.tts.TtsManager
 import com.voxalarm.tts.TtsState
 import com.voxalarm.tts.VoiceInfo
 import com.voxalarm.ui.theme.VoxBlack
@@ -76,13 +83,28 @@ fun VoicePicker(
     onLanguageChange: (String) -> Unit,
     onVoiceChange: (String) -> Unit,
     color: Color,
+    onRefresh: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    // Re-check the speech engine whenever the screen comes back (e.g. after installing one).
+    val owner = LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val obs = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_RESUME) onRefresh() }
+        owner.lifecycle.addObserver(obs)
+        onDispose { owner.lifecycle.removeObserver(obs) }
+    }
     when {
         tts.failed -> {
             Text(
-                "No Text-to-Speech engine is available. Install or enable one (for example \"Speech Services by Google\") – alarms will play a tone until then.",
+                "No Text-to-Speech engine is available. Install \"Speech Services by Google\" (free), then come back here – alarms play a tone until then.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
+            )
+            Spacer(Modifier.size(10.dp))
+            GradientButton(
+                "Install Google voices", icon = Icons.Filled.CloudDownload,
+                brush = Brush.horizontalGradient(listOf(color, color.copy(alpha = 0.7f))), glowColor = color,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { context.openGoogleTtsInPlayStore() },
             )
             Spacer(Modifier.size(10.dp))
             VoiceEngineButtons(context, color)
@@ -161,6 +183,15 @@ private fun VoiceEngineButtons(context: Context, color: Color) {
             "TTS settings", icon = Icons.Filled.Tune, color = color, height = 40.dp,
             onClick = { context.launchSafely(Intent("com.android.settings.TTS_SETTINGS")) },
         )
+    }
+}
+
+fun Context.openGoogleTtsInPlayStore() {
+    val id = TtsManager.GOOGLE_TTS
+    try {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$id")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (t: Throwable) {
+        launchSafely(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$id")))
     }
 }
 

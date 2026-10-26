@@ -99,6 +99,8 @@ class EditAlarmViewModel(app: Application, savedState: SavedStateHandle) : Andro
 
     fun stopVoice() = tts.stop()
 
+    fun refreshTts() = tts.refresh()
+
     fun save(onSaved: () -> Unit) {
         val a = _draft.value ?: return
         viewModelScope.launch {

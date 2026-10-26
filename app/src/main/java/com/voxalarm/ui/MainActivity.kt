@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,6 +60,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.voxalarm.container
 import com.voxalarm.data.AppSettings
+import com.voxalarm.ui.components.VoiceSetupDialog
 import com.voxalarm.ui.components.neonGlow
 import com.voxalarm.ui.edit.EditAlarmScreen
 import com.voxalarm.ui.history.HistoryScreen
@@ -106,6 +108,12 @@ fun VoxApp() {
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
     val showBar = route in tabs.map { it.route }
+
+    // First-launch prompt to install Google's speech engine when it's missing.
+    val context = LocalContext.current
+    val previewTts = remember { context.container.previewTts }
+    val ttsState by previewTts.state.collectAsStateWithLifecycle()
+    VoiceSetupDialog(ttsState, onRefresh = previewTts::refresh)
 
     Scaffold(
         containerColor = VoxBlack,
