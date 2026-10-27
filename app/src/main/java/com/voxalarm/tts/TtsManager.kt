@@ -1,6 +1,7 @@
 package com.voxalarm.tts
 
 import android.content.Context
+import android.content.Intent
 import android.media.AudioAttributes
 import android.os.Bundle
 import android.os.Handler
@@ -44,6 +45,8 @@ data class TtsState(
     val engineName: String = "",
     val voices: List<VoiceInfo> = emptyList(),
     val speaking: Boolean = false,
+    /** Why no engine could start – shown to help troubleshooting. */
+    val diagnostics: String = "",
 )
 
 data class SpeechConfig(
@@ -69,23 +72,75 @@ class TtsManager(context: Context) {
     val state: StateFlow<TtsState> = _state.asStateFlow()
 
     private lateinit var tts: TextToSpeech
-    private var usingGoogle = false
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    /** Engines still to try (null = system default), the current attempt and a log for diagnostics. */
+    private var candidates = ArrayDeque<String?>()
+    private var currentEngine: String? = null
+    private var attemptId = 0
+    private val attemptLog = mutableListOf<String>()
+    private var installedEngines: List<String> = emptyList()
 
     init {
         connect()
     }
 
     /**
-     * Binds to Google's "Speech Services" engine when it is installed (best voices),
-     * otherwise to the device's default engine.
+     * Tries Google's "Speech Services" first (best voices), then the system default,
+     * then every other installed engine, until one starts successfully.
      */
-    private fun connect(allowGoogle: Boolean = true) {
-        val google = allowGoogle && runCatching {
+    private fun connect() {
+        installedEngines = runCatching {
+            appContext.packageManager
+                .queryIntentServices(Intent(TextToSpeech.Engine.INTENT_ACTION_TTS_SERVICE), 0)
+                .map { it.serviceInfo.packageName }
+                .distinct()
+        }.getOrDefault(emptyList())
+        val googleInstalled = GOOGLE_TTS in installedEngines || runCatching {
             appContext.packageManager.getPackageInfo(GOOGLE_TTS, 0); true
         }.getOrDefault(false)
-        usingGoogle = google
-        tts = if (google) TextToSpeech(appContext, { status -> onInit(status) }, GOOGLE_TTS)
-        else TextToSpeech(appContext) { status -> onInit(status) }
+
+        candidates = ArrayDeque<String?>().apply {
+            if (googleInstalled) add(GOOGLE_TTS)
+            add(null)
+            installedEngines.filter { it != GOOGLE_TTS }.forEach { add(it) }
+        }
+        attemptLog.clear()
+        connectNext()
+    }
+
+    private fun connectNext() {
+        if (candidates.isEmpty()) {
+            val diag = "Engines found: " + installedEngines.ifEmpty { listOf("none") }.joinToString() +
+                ". Tried: " + attemptLog.joinToString()
+            Log.w(TAG, "No TTS engine could start. $diag")
+            _state.value = _state.value.copy(failed = true, diagnostics = diag)
+            readySignal.complete(false)
+            return
+        }
+        val engine = candidates.removeFirst()
+        currentEngine = engine
+        val id = ++attemptId
+        val listener = TextToSpeech.OnInitListener { status ->
+            // Always handle on the main thread, and after the constructor has returned.
+            mainHandler.post { if (id == attemptId) onInit(status) }
+        }
+        // If an engine never answers, move on to the next one.
+        mainHandler.postDelayed({
+            if (id == attemptId && !_state.value.ready && !_state.value.failed) {
+                attemptLog += "${engine ?: "default"} (no response)"
+                runCatching { tts.shutdown() }
+                connectNext()
+            }
+        }, 8000)
+        tts = try {
+            if (engine != null) TextToSpeech(appContext, listener, engine) else TextToSpeech(appContext, listener)
+        } catch (t: Throwable) {
+            Log.w(TAG, "Creating TTS for ${engine ?: "default"} threw", t)
+            attemptLog += "${engine ?: "default"} (crashed)"
+            mainHandler.post { connectNext() }
+            return
+        }
     }
 
     /**
@@ -104,20 +159,11 @@ class TtsManager(context: Context) {
     }
 
     private fun onInit(status: Int) {
-        if (status != TextToSpeech.SUCCESS && usingGoogle) {
-            // Google engine present but unusable (e.g. disabled) – try the device default.
-            Log.w(TAG, "Google TTS init failed: $status – trying default engine")
-            // Posted, because the engine may report failure from inside its constructor.
-            Handler(Looper.getMainLooper()).post {
-                runCatching { tts.shutdown() }
-                connect(allowGoogle = false)
-            }
-            return
-        }
         if (status != TextToSpeech.SUCCESS) {
-            Log.w(TAG, "TTS init failed: $status")
-            _state.value = _state.value.copy(failed = true)
-            readySignal.complete(false)
+            Log.w(TAG, "TTS init failed for ${currentEngine ?: "default"}: $status")
+            attemptLog += "${currentEngine ?: "default"} (error $status)"
+            runCatching { tts.shutdown() }
+            connectNext()
             return
         }
         tts.setAudioAttributes(
@@ -159,7 +205,7 @@ class TtsManager(context: Context) {
         _state.value = _state.value.copy(
             ready = true,
             voices = voices,
-            engineName = runCatching { tts.defaultEngine }.getOrNull().orEmpty(),
+            engineName = currentEngine ?: runCatching { tts.defaultEngine }.getOrNull().orEmpty(),
         )
     }
 

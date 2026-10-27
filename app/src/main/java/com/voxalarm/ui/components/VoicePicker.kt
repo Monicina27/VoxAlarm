@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -96,8 +97,20 @@ fun VoicePicker(
     when {
         tts.failed -> {
             Text(
-                "No Text-to-Speech engine is available. Install \"Speech Services by Google\" (free), then come back here – alarms play a tone until then.",
+                "The voice engine couldn't start. Make sure \"Speech Services by Google\" is installed and up to date, then tap Try again – alarms play a tone until then.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
+            )
+            if (tts.diagnostics.isNotBlank()) {
+                Text(
+                    tts.diagnostics,
+                    style = MaterialTheme.typography.bodySmall, color = VoxTextDim,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+            Spacer(Modifier.size(10.dp))
+            NeonOutlineButton(
+                "Try again", icon = Icons.Filled.Refresh, color = color,
+                modifier = Modifier.fillMaxWidth(), onClick = onRefresh,
             )
             Spacer(Modifier.size(10.dp))
             GradientButton(
